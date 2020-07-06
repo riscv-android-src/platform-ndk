@@ -226,7 +226,7 @@ def _install_file(src_file, dst_file):
 class Clang(ndk.builds.Module):
     name = 'clang'
     path = 'toolchains/llvm/prebuilt/{host}'
-    version = 'clang-r346389c'
+    version = 'clang-dev'
     notice_group = ndk.builds.NoticeGroup.TOOLCHAIN
 
     @property
@@ -270,6 +270,7 @@ class Clang(ndk.builds.Module):
             shutil.rmtree(install_path)
         if not os.path.exists(install_parent):
             os.makedirs(install_parent)
+
         shutil.copytree(self.get_prebuilt_path(), install_path)
 
         # clang-4053586 was patched in the prebuilts directory to add the
@@ -287,16 +288,17 @@ class Clang(ndk.builds.Module):
             # want to make sure Windows behavior is consistent with the other
             # platforms, so just unwrap the compilers until they do something
             # useful and are available on Windows.
-            os.rename(os.path.join(install_path, 'bin/clang.real'),
-                      os.path.join(install_path, 'bin/clang'))
-            os.rename(os.path.join(install_path, 'bin/clang++.real'),
-                      os.path.join(install_path, 'bin/clang++'))
+            # FIXME: don't copy for clang-dev
+            #os.rename(os.path.join(install_path, 'bin/clang.real'),
+            #          os.path.join(install_path, 'bin/clang'))
+            #os.rename(os.path.join(install_path, 'bin/clang++.real'),
+            #          os.path.join(install_path, 'bin/clang++'))
 
             # The prebuilts have symlinks pointing at a clang-MAJ.MIN binary,
             # but we replace symlinks with standalone copies, so remove this
             # copy to save space.
             bin_dir = os.path.join(install_path, 'bin')
-            (clang_maj_min,) = glob.glob(os.path.join(bin_dir, 'clang-?'))
+            (clang_maj_min,) = glob.glob(os.path.join(bin_dir, 'clang-1?'))
             os.remove(clang_maj_min)
 
         # Remove LLD duplicates. We only need ld.lld.
@@ -602,8 +604,9 @@ class HostTools(ndk.builds.Module):
         ndk.builds.invoke_external_build(
             'toolchain/python/build.py', build_args)
 
-        print('Building GDB...')
-        ndk.builds.invoke_external_build('toolchain/gdb/build.py', build_args)
+        # FIXME: Skip build gdb for riscv64
+        #print('Building GDB...')
+        #ndk.builds.invoke_external_build('toolchain/gdb/build.py', build_args)
 
         print('Building YASM...')
         ndk.builds.invoke_external_build('toolchain/yasm/build.py', build_args)
@@ -613,7 +616,7 @@ class HostTools(ndk.builds.Module):
         ndk.ext.shutil.create_directory(install_dir)
 
         packages = [
-            'gdb-multiarch-7.11',
+            #'gdb-multiarch-7.11',
             'ndk-make',
             'ndk-python',
             'ndk-yasm',
@@ -888,6 +891,8 @@ class Platforms(ndk.builds.Module):
         arches = ['arm', 'x86']
         if api >= 21:
             arches.extend(['arm64', 'x86_64'])
+        if api >= 29:
+                arches.extend(['riscv64'])
         return arches
 
     def get_build_cmd(self, dst, srcs, api, arch, build_number):
@@ -989,6 +994,7 @@ class Platforms(ndk.builds.Module):
         build_dir = os.path.join(self.out_dir, self.path)
         if os.path.exists(build_dir):
             shutil.rmtree(build_dir)
+        # riscv64_available_abis = [29]
 
         for api in self.get_apis():
             if api in self.skip_apis:
@@ -996,8 +1002,11 @@ class Platforms(ndk.builds.Module):
 
             platform = 'android-{}'.format(api)
             for arch in self.get_arches(api):
+                # if arch == "riscv64" and api not in riscv64_available_abis:
+                #  continue
                 arch_name = 'arch-{}'.format(arch)
                 dst_dir = os.path.join(build_dir, platform, arch_name)
+                print ("helloworld1, mkdir: {}".format(dst_dir))
                 os.makedirs(dst_dir)
                 self.build_crt_objects(dst_dir, api, arch,
                                        self.context.build_number)
@@ -1005,7 +1014,8 @@ class Platforms(ndk.builds.Module):
     def install(self):
         build_dir = os.path.join(self.out_dir, self.path)
         install_dir = self.get_install_path()
-
+        # riscv64_available_abis = [29]
+        print ("install: build_dir {} to install_dir {}\n".format(build_dir, install_dir))
         if os.path.exists(install_dir):
             shutil.rmtree(install_dir)
         os.makedirs(install_dir)
@@ -1018,12 +1028,15 @@ class Platforms(ndk.builds.Module):
             platform = 'android-{}'.format(api)
             platform_src = self.prebuilt_path('platforms', platform)
             platform_dst = os.path.join(install_dir, 'android-{}'.format(api))
+            print ("copytree hellowrold3: {} to {}\n".format(platform_src, platform_dst))
             shutil.copytree(platform_src, platform_dst)
 
             for arch in self.get_arches(api):
                 arch_name = 'arch-{}'.format(arch)
                 triple = ndk.abis.arch_to_triple(arch)
 
+                #if arch == "riscv64" and api not in riscv64_available_abis:
+                #  continue
                 # Install static libraries from prebuilts/ndk/platform/sysroot.
                 # TODO: Determine if we can change the build system to use the
                 # libraries directly from the sysroot directory rather than
@@ -1044,10 +1057,12 @@ class Platforms(ndk.builds.Module):
                         install_dir, platform, arch_name, 'usr/lib'))
 
                 # Install the CRT objects that we just built.
+
                 obj_dir = os.path.join(build_dir, platform, arch_name)
                 for name in os.listdir(obj_dir):
                     obj_src = os.path.join(obj_dir, name)
                     obj_dst = os.path.join(lib_dir_dst, name)
+                    print ("copy obj_src: {} to obj_dst {}\n".format(obj_src, obj_dst))
                     shutil.copy2(obj_src, obj_dst)
 
         # https://github.com/android-ndk/ndk/issues/372
@@ -1442,6 +1457,8 @@ class BaseToolchain(ndk.builds.Module):
 
             platform = 'android-{}'.format(api)
             for arch in self.get_dep('platforms').get_arches(api):
+                #if arch == "riscv64" and api not in [29]:
+                #  continue
                 triple = ndk.abis.arch_to_triple(arch)
                 arch_name = 'arch-{}'.format(arch)
                 lib_dir = 'lib64' if arch == 'x86_64' else 'lib'
@@ -1662,7 +1679,10 @@ class Toolchain(ndk.builds.Module):
             if api in Platforms.skip_apis:
                 continue
 
-            for arch in self.get_dep('platforms').get_arches(api):
+            #riscv64_available_abis = [29]
+            for arch in self.get_dep('platforms').get_arches(api): 
+                #if arch == "riscv64" and api not in riscv64_available_abis:
+                #    continue
                 triple = ndk.abis.arch_to_triple(arch)
                 dst_dir = os.path.join(install_dir, 'sysroot/usr/lib', triple,
                                        str(api))
@@ -2227,7 +2247,7 @@ ALL_MODULES = [
     Changelog(),
     Clang(),
     CpuFeatures(),
-    GdbServer(),
+    #GdbServer(),
     Gtest(),
     HostTools(),
     LibAndroidSupport(),
@@ -2239,8 +2259,8 @@ ALL_MODULES = [
     NativeAppGlue(),
     NdkBuild(),
     NdkBuildShortcut(),
-    NdkGdb(),
-    NdkGdbShortcut(),
+    #NdkGdb(),
+    #NdkGdbShortcut(),
     NdkHelper(),
     NdkPy(),
     NdkStack(),
@@ -2251,7 +2271,7 @@ ALL_MODULES = [
     Readme(),
     RenderscriptLibs(),
     RenderscriptToolchain(),
-    ShaderTools(),
+    #ShaderTools(),
     SimplePerf(),
     SourceProperties(),
     Sysroot(),
@@ -2282,7 +2302,7 @@ def parse_args():
 
     parser.add_argument(
         '--arch',
-        choices=('arm', 'arm64', 'x86', 'x86_64'),
+        choices=('arm', 'arm64', 'x86', 'x86_64', 'riscv64'),
         help='Build for the given architecture. Build all by default.')
     parser.add_argument(
         '-j', '--jobs', type=int, default=multiprocessing.cpu_count(),

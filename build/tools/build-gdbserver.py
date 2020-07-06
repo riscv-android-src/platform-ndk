@@ -29,6 +29,7 @@ GDBSERVER_TARGETS = (
     'aarch64-eabi-linux',
     'i686-linux-android',
     'x86_64-linux-android',
+    'riscv64-unknown-linux',
 )
 
 

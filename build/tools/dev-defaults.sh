@@ -91,6 +91,9 @@ DEFAULT_ARCH_TOOLCHAIN_PREFIX_mips=mips64el-linux-android
 DEFAULT_ARCH_TOOLCHAIN_NAME_mips64=mips64el-linux-android
 DEFAULT_ARCH_TOOLCHAIN_PREFIX_mips64=mips64el-linux-android
 
+DEFAULT_ARCH_TOOLCHAIN_NAME_riscv64=riscv64-linux-android
+DEFAULT_ARCH_TOOLCHAIN_PREFIX_riscv64=riscv64-linux-android
+
 # The build number of clang used to build pieces of the NDK (like platforms).
 DEFAULT_LLVM_VERSION="2455903"
 

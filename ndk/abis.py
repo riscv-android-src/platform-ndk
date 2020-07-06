@@ -29,6 +29,7 @@ LP32_ABIS = (
 LP64_ABIS = (
     'arm64-v8a',
     'x86_64',
+    'riscv64',
 )
 
 
@@ -40,6 +41,7 @@ ALL_ARCHITECTURES = (
     Arch('arm64'),
     Arch('x86'),
     Arch('x86_64'),
+    Arch('riscv64'),
 )
 
 
@@ -48,6 +50,7 @@ ALL_TOOLCHAINS = (
     'aarch64-linux-android',
     'x86',
     'x86_64',
+    'riscv64-linux-android',
 )
 
 
@@ -56,6 +59,7 @@ ALL_TRIPLES = (
     'aarch64-linux-android',
     'i686-linux-android',
     'x86_64-linux-android',
+    'riscv64-linux-android',
 )
 
 
@@ -77,6 +81,7 @@ def arch_to_abis(arch):
         'arm64': ['arm64-v8a'],
         'x86': ['x86'],
         'x86_64': ['x86_64'],
+        'riscv64': ['riscv64'],
     }[arch]
 
 
@@ -86,6 +91,7 @@ def abi_to_arch(arch):
         'arm64-v8a': 'arm64',
         'x86': 'x86',
         'x86_64': 'x86_64',
+        'riscv64': 'riscv64',
     }[arch]
 
 

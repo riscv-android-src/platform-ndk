@@ -73,7 +73,7 @@ set_parameters ()
     GDBSERVER_HOST="$2"
     SRC_DIR="$3"
     NDK_DIR="$4"
-    GDBVER=
+    GDBVER=8.2.50
 
     # Check architecture
     #
@@ -132,6 +132,7 @@ set_parameters ()
     fi
 
     log "Using NDK directory: $NDK_DIR"
+    SYSROOT=$NDK_DIR/../out/android-ndk-r20/sysroot/
 }
 
 set_parameters $PARAMETERS
@@ -190,6 +191,15 @@ if [ "$ARCH" = "mips" ] ; then
     TARGET_FLAG=-mips32
 fi
 
+if [ "$ARCH" = "riscv64" ] ; then
+TARGET_FLAG="-I$BUILD_SYSROOT/usr/include/riscv64-linux-android \
+    -I$NDK_DIR/../prebuilts/ndk/current/toolchains/linux-x86_64/riscv64-linux-android-4.9/lib/gcc/riscv64-linux-android/4.9.x/include "
+fi
+
+if [ "$ARCH" = "arm64" ] ; then
+TARGET_FLAG="-isystem $BUILD_SYSROOT/usr/include/aarch64-linux-android"
+fi
+
 LIBDIR=$(get_default_libdir_for_arch $ARCH)
 
 # Remove libthread_db to ensure we use exactly the one we want.
@@ -207,7 +217,7 @@ if [ "$NOTHREADS" != "yes" ] ; then
     fi
 
     run cp $LIBTHREAD_DB_DIR/thread_db.h $BUILD_SYSROOT/usr/include/
-    run ${TOOLCHAIN_PREFIX}gcc --sysroot=$BUILD_SYSROOT $TARGET_FLAG -o $BUILD_SYSROOT/usr/$LIBDIR/libthread_db.o -c $LIBTHREAD_DB_DIR/libthread_db.c
+    run ${TOOLCHAIN_PREFIX}gcc --sysroot=$BUILD_SYSROOT  $TARGET_FLAG -o $BUILD_SYSROOT/usr/$LIBDIR/libthread_db.o -c $LIBTHREAD_DB_DIR/libthread_db.c
     run ${TOOLCHAIN_PREFIX}ar -rD $BUILD_SYSROOT/usr/$LIBDIR/libthread_db.a $BUILD_SYSROOT/usr/$LIBDIR/libthread_db.o
     if [ $? != 0 ] ; then
         dump "ERROR: Could not compile libthread_db.c!"

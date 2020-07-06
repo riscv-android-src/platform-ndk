@@ -18,5 +18,11 @@
     "bitness": 64,
     "default": true,
     "deprecated": false
+  },
+  "riscv64": {
+    "bitness": 64,
+    "default": true,
+    "deprecated": false
   }
+
 }

@@ -117,8 +117,9 @@ def main(args):
     files_to_copy.extend(scripts_to_copy)
 
     # Test, except on windows.
-    if (not args.host.startswith('windows')):
-        subprocess.check_call([ctest, '--verbose'], cwd=obj_out)
+    # FIXME: Don't test for riscv64 now.
+    #if (not args.host.startswith('windows')):
+    #    subprocess.check_call([ctest, '--verbose'], cwd=obj_out)
 
     # Copy to install tree.
     for src in files_to_copy:
