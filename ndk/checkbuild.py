@@ -481,7 +481,10 @@ class Clang(ndk.builds.Module):
                     ndk.abis.Arch('arm64'): 'aarch64',
                     ndk.abis.Arch('x86'): 'i386',
                     ndk.abis.Arch('x86_64'): 'x86_64',
+                    ndk.abis.Arch('riscv64'): 'riscv64',
                 }[arch]
+                if arch == 'riscv64':
+                    (dst_lib_dir / subdir).mkdir(parents=True, exist_ok=True)
                 (dst_lib_dir / subdir / 'libatomic.a').write_text(
                     textwrap.dedent("""\
                     /* The __atomic_* APIs are now in libclang_rt.builtins-*.a. They might
@@ -780,11 +783,13 @@ class Libcxx(ndk.builds.Module):
     def build(self) -> None:
         ndk_build = os.path.join(
             self.get_dep('ndk-build').get_build_host_install(), 'ndk-build')
+        print('ndk_build : ', ndk_build)
         bionic_path = ndk.paths.android_path('bionic')
-
+        print('bionic_path: ', bionic_path)
         android_mk = self.src / 'Android.mk'
         application_mk = self.src / 'Application.mk'
-
+        print('android_mk: ', android_mk)
+        print('application_mk: ', application_mk)
         build_cmd = [
             'bash', ndk_build, f'-j{multiprocessing.cpu_count()}', 'V=1',
 
@@ -922,6 +927,8 @@ class Platforms(ndk.builds.Module):
         # All codenamed APIs are at 64-bit capable.
         if isinstance(api, str) or api >= 21:
             arches.extend([ndk.abis.Arch('arm64'), ndk.abis.Arch('x86_64')])
+        if isinstance(api, str) or api >= 29:
+            arches.extend([ndk.abis.Arch('riscv64')])
         return arches
 
     def get_build_cmd(self, dst: str, srcs: List[str], api: int,
@@ -1030,7 +1037,9 @@ class Platforms(ndk.builds.Module):
             platform = 'android-{}'.format(api)
             for arch in self.get_arches(api):
                 arch_name = 'arch-{}'.format(arch)
+                print('arch-{}'.format(arch))
                 dst_dir = os.path.join(build_dir, platform, arch_name)
+                print ("helloworld1, mkdir: {}".format(dst_dir))
                 os.makedirs(dst_dir)
                 assert self.context is not None
                 self.build_crt_objects(dst_dir, api, arch,
@@ -1039,6 +1048,7 @@ class Platforms(ndk.builds.Module):
     def install(self) -> None:
         build_dir = os.path.join(self.out_dir, self.path)
         install_dir = self.get_install_path()
+        print ("install: build_dir {} to install_dir {}\n".format(build_dir, install_dir))
 
         if os.path.exists(install_dir):
             shutil.rmtree(install_dir)
@@ -1052,6 +1062,7 @@ class Platforms(ndk.builds.Module):
             platform = 'android-{}'.format(api)
             platform_src = self.prebuilts_path / 'platforms' / platform
             platform_dst = os.path.join(install_dir, 'android-{}'.format(api))
+            print ("copytree hellowrold3: {} to {}\n".format(platform_src, platform_dst))
             shutil.copytree(platform_src, platform_dst)
 
             for arch in self.get_arches(api):
@@ -1082,6 +1093,7 @@ class Platforms(ndk.builds.Module):
                 for name in os.listdir(obj_dir):
                     obj_src = os.path.join(obj_dir, name)
                     obj_dst = os.path.join(lib_dir_dst, name)
+                    print ("copy obj_src: {} to obj_dst {}\n".format(obj_src, obj_dst))
                     shutil.copy2(obj_src, obj_dst)
 
         # https://github.com/android-ndk/ndk/issues/372
@@ -1553,6 +1565,15 @@ class BaseToolchain(ndk.builds.Module):
                 dst_dir = os.path.join(install_dir, 'sysroot/usr/lib', triple,
                                        str(api))
                 shutil.copytree(src_dir, dst_dir)
+
+                if arch == 'riscv64':
+                  gcc_lib_dir = install_dir / 'lib/gcc' / triple / '4.9.x'
+                  shutil.copy2(os.path.join(src_dir, 'crtbegin_so.o'), gcc_lib_dir / 'crtbegin_so.o')
+                  shutil.copy2(os.path.join(src_dir, 'crtend_so.o'), gcc_lib_dir / 'crtend_so.o')
+                  shutil.copy2(os.path.join(src_dir, 'crtbegin_dynamic.o'), gcc_lib_dir / 'crtbegin_dynamic.o')
+                  shutil.copy2(os.path.join(src_dir, 'crtend_android.o'), gcc_lib_dir / 'crtend_android.o')
+                  shutil.copy2(os.path.join(src_dir, 'crtbegin_static.o'), gcc_lib_dir)
+
                 # TODO: Remove duplicate static libraries from this directory.
                 # We already have them in the version-generic directory.
 
@@ -1710,6 +1731,13 @@ class Toolchain(ndk.builds.Module):
                 libcxx_a_path = os.path.join(dst_dir, 'libc++.a')
                 with open(libcxx_a_path, 'w') as script:
                     script.write('INPUT({})'.format(' '.join(static_script)))
+
+                if arch == 'riscv64':
+                    gcc_lib_dir = install_dir / 'lib/gcc' / triple / '4.9.x'
+                    shutil.copy2(os.path.join(dst_dir, 'libc++.a'), gcc_lib_dir)
+                    shutil.copy2(os.path.join(dst_dir, 'liblog.so'), gcc_lib_dir)
+                    shutil.copy2(os.path.join(dst_dir, 'libandroid.so'), gcc_lib_dir)
+                    shutil.copy2(os.path.join(dst_dir, 'libOpenSLES.so'), gcc_lib_dir)
 
 
 def make_format_value(value: Any) -> Any:
@@ -2298,7 +2326,7 @@ ALL_MODULES = [
     Changelog(),
     Clang(),
     CpuFeatures(),
-    Gdb(),
+    #Gdb(),
     Gtest(),
     LibAndroidSupport(),
     LibShaderc(),
@@ -2309,8 +2337,8 @@ ALL_MODULES = [
     NativeAppGlue(),
     NdkBuild(),
     NdkBuildShortcut(),
-    NdkGdb(),
-    NdkGdbShortcut(),
+    #NdkGdb(),
+    #NdkGdbShortcut(),
     NdkLldbShortcut(),
     NdkHelper(),
     NdkStack(),
@@ -2323,7 +2351,7 @@ ALL_MODULES = [
     Readme(),
     RenderscriptLibs(),
     RenderscriptToolchain(),
-    ShaderTools(),
+    #ShaderTools(),
     SimplePerf(),
     SourceProperties(),
     Sysroot(),

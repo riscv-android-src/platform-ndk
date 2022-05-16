@@ -34,5 +34,14 @@
     "arch": "x86_64",
     "triple": "x86_64-linux-android",
     "llvm_triple": "x86_64-none-linux-android"
+  },
+  "riscv64": {
+    "bitness": 64,
+    "default": true,
+    "deprecated": false,
+    "proc": "riscv64",
+    "arch": "riscv64",
+    "triple": "riscv64-linux-android",
+    "llvm_triple": "riscv64-none-linux-android"
   }
 }
