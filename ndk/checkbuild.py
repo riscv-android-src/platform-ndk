@@ -1738,6 +1738,7 @@ class Toolchain(ndk.builds.Module):
                     shutil.copy2(os.path.join(dst_dir, 'liblog.so'), gcc_lib_dir)
                     shutil.copy2(os.path.join(dst_dir, 'libandroid.so'), gcc_lib_dir)
                     shutil.copy2(os.path.join(dst_dir, 'libOpenSLES.so'), gcc_lib_dir)
+                    shutil.copy2(os.path.join(dst_dir, 'libvulkan.so'), gcc_lib_dir)
 
 
 def make_format_value(value: Any) -> Any:

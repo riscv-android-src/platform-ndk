@@ -62,6 +62,7 @@ def get_triple(arch):
         'arm64': 'aarch64-linux-android',
         'x86': 'i686-linux-android',
         'x86_64': 'x86_64-linux-android',
+        'riscv64': 'riscv64-linux-android',
     }[arch]
 
 
@@ -232,7 +233,7 @@ def create_toolchain(install_path, arch, api, toolchain_path, host_tag):
     gdbserver_path = os.path.join(
         NDK_DIR, 'prebuilt', 'android-' + arch, 'gdbserver')
     gdbserver_install = os.path.join(install_path, 'share', 'gdbserver')
-    shutil.copytree(gdbserver_path, gdbserver_install)
+    #shutil.copytree(gdbserver_path, gdbserver_install)
 
 
 def warn_unnecessary(arch, api, host_tag):
@@ -282,7 +283,7 @@ def parse_args():
 
     parser.add_argument(
         '--arch', required=True,
-        choices=('arm', 'arm64', 'x86', 'x86_64'))
+        choices=('arm', 'arm64', 'x86', 'x86_64', 'riscv64'))
     parser.add_argument(
         '--api', type=int,
         help='Target the given API version (example: "--api 24").')
